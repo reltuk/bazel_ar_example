@@ -1,0 +1,50 @@
+cc_library(
+  name = "a",
+  linkstatic = True,
+  srcs = [
+    "a_one.cc",
+    "a_two.cc",
+  ],
+)
+
+cc_library(
+  name = "b",
+  linkstatic = True,
+  srcs = [
+    "b_one.cc",
+    "b_two.cc",
+  ],
+)
+
+# Building this genrule target will build "liba.a" and "libb.a" completely, and
+# this genrule we be rebuilt anytime "liba.a" or "libb.a" changes.
+genrule(
+  name = "naive_libnew",
+  outs = ["naive_libnew.a"],
+  srcs = [
+    ":a",
+    ":b",
+  ],
+  cmd = " && ".join([
+    "ar x $(location :a) a_one.o",
+    "ar x $(location :b) b_two.o",
+    "ar r $@ a_one.o b_two.o",
+  ]),
+)
+
+load("//:rule.bzl", "rearchive_lib")
+
+# This target only depends on the included object files, not the archives
+# themselves. This target does not extract the object files from the libraries,
+# but directly includes the object files which are also included in the "deps".
+rearchive_lib(
+  name = "libnew",
+  deps = [
+    ":a",
+    ":b",
+  ],
+  objects = [
+    "a_one.o",
+    "b_two.o",
+  ],
+)
